@@ -7,10 +7,19 @@ import {
   usePlaylistState,
 } from "@waveform-playlist/browser";
 import type { ClipTrack } from "@waveform-playlist/core";
+import { X } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 
-export function TrackControls({ trackIndex, tracks }: { trackIndex: number; tracks: ClipTrack[] }) {
+export function TrackControls({
+  trackIndex,
+  tracks,
+  onRemove,
+}: {
+  trackIndex: number;
+  tracks: ClipTrack[];
+  onRemove?: (trackIndex: number) => void;
+}) {
   const t = useTranslations("Tools.AudioEditor");
   const { setTrackMute, setTrackSolo, setTrackVolume, setTrackPan, setSelectedTrackId } =
     usePlaylistControls();
@@ -30,7 +39,21 @@ export function TrackControls({ trackIndex, tracks }: { trackIndex: number; trac
       onClick={() => setSelectedTrackId(track.id)}
       data-testid={`track-controls-${trackIndex}`}
     >
-      <p className="truncate font-medium" title={track.name}>{track.name}</p>
+      <div className="flex items-center gap-1">
+        <p className="flex-1 truncate font-medium" title={track.name}>{track.name}</p>
+        {onRemove && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="size-6 shrink-0 p-0"
+            onClick={(e) => { e.stopPropagation(); onRemove(trackIndex); }}
+            aria-label={t("remove")}
+            data-testid={`remove-track-${trackIndex}`}
+          >
+            <X className="size-3.5" />
+          </Button>
+        )}
+      </div>
       <div className="flex gap-1">
         <Button
           size="sm"
