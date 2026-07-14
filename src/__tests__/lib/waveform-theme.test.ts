@@ -1,20 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-
-// Mock the waveform-playlist library which uses styled-components
-vi.mock("@waveform-playlist/ui-components", () => ({
-  darkTheme: {
-    surfaceColor: "#161615",
-    waveFillColor: "#5d80ff",
-    playheadColor: "#f1f1ef",
-  },
-  defaultTheme: {
-    surfaceColor: "#ffffff",
-    waveFillColor: "#2e5cff",
-    playheadColor: "#161615",
-  },
-}));
-
-import { resolveWaveformTheme } from "@/lib/audio/waveform-theme";
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolveWaveformTheme, FALLBACK } from "@/lib/audio/waveform-theme";
 
 describe("resolveWaveformTheme", () => {
   it("maps resolved token values into canvas-safe color strings", () => {
@@ -32,10 +18,31 @@ describe("resolveWaveformTheme", () => {
     for (const v of Object.values(theme)) expect(String(v)).not.toContain("var(");
   });
 
-  it("falls back to library defaults when a token is missing", () => {
+  it("falls back to app design tokens when tokens are missing", () => {
     const el = document.createElement("div");
+    // No tokens set — should use FALLBACK
     const theme = resolveWaveformTheme(el, true);
-    expect(theme.waveFillColor).toBeTruthy();
+    expect(theme.waveFillColor).toBe(FALLBACK.dark.accent);
     expect(String(theme.waveFillColor)).not.toContain("var(");
+  });
+
+  it("FALLBACK values are synced with design-tokens.css", () => {
+    const css = readFileSync("src/styles/design-tokens.css", "utf8");
+    const root = css.split(".dark")[0];
+    const dark = css.split(".dark")[1] ?? "";
+
+    // Light fallbacks from :root
+    expect(root).toContain(`--bt-surface: ${FALLBACK.light.surface}`);
+    expect(root).toContain(`--bt-ink: ${FALLBACK.light.ink}`);
+    expect(root).toContain(`--bt-muted: ${FALLBACK.light.muted}`);
+    expect(root).toContain(`--bt-accent: ${FALLBACK.light.accent}`);
+    expect(root).toContain(`--bt-line: ${FALLBACK.light.line}`);
+
+    // Dark fallbacks from .dark
+    expect(dark).toContain(`--bt-surface: ${FALLBACK.dark.surface}`);
+    expect(dark).toContain(`--bt-ink: ${FALLBACK.dark.ink}`);
+    expect(dark).toContain(`--bt-muted: ${FALLBACK.dark.muted}`);
+    expect(dark).toContain(`--bt-accent: ${FALLBACK.dark.accent}`);
+    expect(dark).toContain(`--bt-line: ${FALLBACK.dark.line}`);
   });
 });

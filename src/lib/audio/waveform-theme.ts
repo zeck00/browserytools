@@ -7,7 +7,28 @@
  */
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
-import { darkTheme, defaultTheme } from "@waveform-playlist/ui-components";
+
+/**
+ * Fallbacks are snapshots of the app's --bt-* design tokens (design-tokens.css),
+ * used only when a token is missing from the DOM (e.g. bare test environments).
+ * They intentionally mirror the app palette, NOT the library's default theme.
+ */
+export const FALLBACK = {
+  light: {
+    surface: "#ffffff",
+    ink: "#161615",
+    muted: "#757570",
+    accent: "#2e5cff",
+    line: "rgba(22, 22, 21, 0.09)",
+  },
+  dark: {
+    surface: "#161615",
+    ink: "#f1f1ef",
+    muted: "#8f8f89",
+    accent: "#5d80ff",
+    line: "rgba(241, 241, 239, 0.09)",
+  },
+} as const;
 
 function token(styles: CSSStyleDeclaration, name: string, fallback: string): string {
   const v = styles.getPropertyValue(name).trim();
@@ -15,13 +36,13 @@ function token(styles: CSSStyleDeclaration, name: string, fallback: string): str
 }
 
 export function resolveWaveformTheme(el: HTMLElement, isDark: boolean): Record<string, string> {
-  const base = (isDark ? darkTheme : defaultTheme) as unknown as Record<string, string>;
+  const fallback = FALLBACK[isDark ? "dark" : "light"];
   const s = getComputedStyle(el);
-  const surface = token(s, "--bt-surface", String(base.surfaceColor ?? (isDark ? "#161615" : "#ffffff")));
-  const ink = token(s, "--bt-ink", isDark ? "#f1f1ef" : "#161615");
-  const mutedText = token(s, "--bt-muted", isDark ? "#8f8f89" : "#757570");
-  const accent = token(s, "--bt-accent", isDark ? "#5d80ff" : "#2e5cff");
-  const line = token(s, "--bt-line", isDark ? "rgba(241, 241, 239, 0.09)" : "rgba(22, 22, 21, 0.09)");
+  const surface = token(s, "--bt-surface", fallback.surface);
+  const ink = token(s, "--bt-ink", fallback.ink);
+  const mutedText = token(s, "--bt-muted", fallback.muted);
+  const accent = token(s, "--bt-accent", fallback.accent);
+  const line = token(s, "--bt-line", fallback.line);
   return {
     backgroundColor: surface,
     surfaceColor: surface,
