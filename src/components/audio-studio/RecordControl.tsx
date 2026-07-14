@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -44,6 +45,11 @@ export function RecordControl({
   const { getPlaybackTime } = usePlaybackAnimation();
   const [punchIn, setPunchIn] = useState(0);
   const rec = useIntegratedRecording(tracks, setTracks, selectedTrackId, { currentTime: punchIn });
+  // Re-entrancy guard for start() (finding 3): a ref (checked synchronously,
+  // immune to React's batching timing) plus mirrored state (to disable the
+  // Record button while the async start sequence is in flight).
+  const startingRef = useRef(false);
+  const [starting, setStarting] = useState(false);
 
   // Live waveform preview for the armed track.
   useEffect(() => {
@@ -78,16 +84,43 @@ export function RecordControl({
   }, [tracks, setTracks, setSelectedTrackId, createArmedTrack, t, rec]);
 
   const start = useCallback(async () => {
+    if (startingRef.current) return; // finding 3: swallow double-clicks/re-entry
     if (!rec.hasPermission || !rec.stream) {
       toast.error(rec.hasPermission ? t("micUnavailable") : t("micDenied"));
       return;
     }
-    const at = getPlaybackTime();
-    setPunchIn(at);
-    setRecordingActive(true, selectedTrackId ?? undefined);
-    const ok = await rec.startRecording();
-    if (ok) await play(at);
-    else setRecordingActive(false);
+    startingRef.current = true;
+    setStarting(true);
+    try {
+      // finding 1: useIntegratedRecording snapshots `options.currentTime`
+      // into a ref DURING RENDER (recording/dist/index.mjs ~553-554:
+      // `currentTimeRef.current = currentTime;`), and `startRecording`
+      // copies that ref into `recordingStartTimeRef.current` synchronously
+      // at call time (~594: `recordingStartTimeRef.current =
+      // currentTimeRef.current;`). A plain `setPunchIn(at)` only schedules
+      // the re-render that would update `currentTimeRef.current` — it does
+      // not happen before the very next line runs. Since nothing here
+      // `await`s between `setPunchIn` and `rec.startRecording()`, without
+      // forcing the render, `startRecording` would read the PREVIOUS
+      // punchIn (0 on the first take), while the live preview above (which
+      // reads local `punchIn` state directly, not through the ref) shows
+      // the new `at` — the two disagree and the clip lands at the wrong
+      // sample. `flushSync` forces RecordControl to re-render synchronously,
+      // which re-invokes `useIntegratedRecording` and writes
+      // `currentTimeRef.current = at` before we proceed. `currentTimeRef`
+      // is a `useRef` — the same object identity across renders — so the
+      // `rec.startRecording` closure captured above (from before the flush)
+      // still reads that exact ref and sees the freshly-committed value.
+      const at = getPlaybackTime();
+      flushSync(() => setPunchIn(at));
+      setRecordingActive(true, selectedTrackId ?? undefined);
+      const ok = await rec.startRecording();
+      if (ok) await play(at);
+      else setRecordingActive(false);
+    } finally {
+      startingRef.current = false;
+      setStarting(false);
+    }
   }, [rec, getPlaybackTime, setRecordingActive, selectedTrackId, play, t]);
 
   const finish = useCallback(() => {
@@ -112,7 +145,7 @@ export function RecordControl({
         <Button
           size="sm"
           variant="outline"
-          disabled={!armed || !secure || !rec.hasPermission}
+          disabled={!armed || !secure || !rec.hasPermission || starting}
           onClick={start}
           data-testid="start-record"
         >

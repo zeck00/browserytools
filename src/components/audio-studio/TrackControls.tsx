@@ -15,10 +15,16 @@ export function TrackControls({
   trackIndex,
   tracks,
   onRemove,
+  removeDisabled,
 }: {
   trackIndex: number;
   tracks: ClipTrack[];
   onRemove?: (trackIndex: number) => void;
+  /** True while this track is the one actively recording — removing it
+   *  mid-take would silently drop the take (review finding 2). The
+   *  AudioStudio-level guard in `removeTrack` is the source of truth; this
+   *  just keeps the button from looking clickable in that state. */
+  removeDisabled?: boolean;
 }) {
   const t = useTranslations("Tools.AudioEditor");
   const { setTrackMute, setTrackSolo, setTrackVolume, setTrackPan, setSelectedTrackId } =
@@ -46,6 +52,7 @@ export function TrackControls({
             size="sm"
             variant="ghost"
             className="size-6 shrink-0 p-0"
+            disabled={removeDisabled}
             onClick={(e) => { e.stopPropagation(); onRemove(trackIndex); }}
             aria-label={t("remove")}
             data-testid={`remove-track-${trackIndex}`}

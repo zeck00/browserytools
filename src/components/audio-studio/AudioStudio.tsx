@@ -160,16 +160,28 @@ export default function AudioStudio() {
   // Dispose the removed track's live Tone.js effect instances (finding 2:
   // clearTrackEffects is the only path that disposes them) and drop its cached
   // wrapper before removing it from state.
+  //
+  // Guard (review finding 2): if the track being removed is the one currently
+  // armed/recording, `useIntegratedRecording`'s `stopRecording` would still
+  // fire later against a `trackId` no longer present in `tracks`, which the
+  // hook itself detects and turns into "Recording completed but track ...
+  // no longer exists" — surfaced to the user as `rec.error` and rendered via
+  // `t("micDenied")`, i.e. the take silently drops with a misleading
+  // "mic access denied" message even though permission was fine. Block the
+  // removal at the source instead of letting the take fail downstream.
   const removeTrack = useCallback(
     (trackIndex: number) => {
       const removed = tracksRef.current[trackIndex];
-      if (removed) {
-        perTrack.clearTrackEffects(removed.id);
-        effectsWrappersRef.current.delete(removed.id);
+      if (!removed) return;
+      if (recordingState?.isRecording && recordingState.trackId === removed.id) {
+        toast.info(t("recording"));
+        return;
       }
+      perTrack.clearTrackEffects(removed.id);
+      effectsWrappersRef.current.delete(removed.id);
       setTracks(tracksRef.current.filter((_, i) => i !== trackIndex));
     },
-    [perTrack]
+    [perTrack, recordingState, t]
   );
 
   return (
@@ -209,6 +221,10 @@ export default function AudioStudio() {
                       trackIndex={trackIndex}
                       tracks={tracks}
                       onRemove={removeTrack}
+                      removeDisabled={
+                        recordingState?.isRecording &&
+                        recordingState.trackId === tracks[trackIndex]?.id
+                      }
                     />
                   )}
                   onRemoveTrack={removeTrack}
