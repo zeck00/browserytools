@@ -1030,7 +1030,7 @@
       "pan": "声像",
       "removeTrack": "移除音轨",
       "addRecordingTrack": "添加录音音轨",
-      "record": "录音",
+      "record": "录制",
       "stopRecording": "停止录制",
       "recording": "录制中…",
       "micDenied": "麦克风访问被拒绝。请在浏览器的网站设置中允许访问以进行录音。",
