@@ -20,6 +20,7 @@ import {
 } from "@/lib/audio/import";
 import { ImportDropzone } from "./ImportDropzone";
 import { TrackControls } from "./TrackControls";
+import { TransportBar } from "./TransportBar";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -84,7 +85,7 @@ export default function AudioStudio() {
           <ClipInteractionProvider snap>
             <KeyboardShortcuts playback clipSplitting undo />
             <div className="flex flex-col gap-3">
-              {/* TODO(task 6): <TransportBar tracks={tracks} /> */}
+              <TransportBar tracks={tracks} />
               <div className="overflow-x-auto rounded-lg border border-[var(--bt-border)]">
                 <Waveform
                   showClipHeaders
