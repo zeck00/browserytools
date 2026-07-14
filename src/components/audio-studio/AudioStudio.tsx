@@ -19,6 +19,7 @@ import {
   STUDIO_SAMPLE_RATE,
 } from "@/lib/audio/import";
 import { ImportDropzone } from "./ImportDropzone";
+import { TrackControls } from "./TrackControls";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -77,6 +78,7 @@ export default function AudioStudio() {
           timescale
           waveHeight={96}
           automaticScroll
+          controls={{ show: true, width: 200 }}
           {...(theme ? { theme } : {})}
         >
           <ClipInteractionProvider snap>
@@ -84,8 +86,15 @@ export default function AudioStudio() {
             <div className="flex flex-col gap-3">
               {/* TODO(task 6): <TransportBar tracks={tracks} /> */}
               <div className="overflow-x-auto rounded-lg border border-[var(--bt-border)]">
-                <Waveform showClipHeaders />
-                {/* TODO(task 5): renderTrackControls + onRemoveTrack props on Waveform */}
+                <Waveform
+                  showClipHeaders
+                  renderTrackControls={(trackIndex) => (
+                    <TrackControls trackIndex={trackIndex} tracks={tracks} />
+                  )}
+                  onRemoveTrack={(trackIndex) =>
+                    setTracks(tracks.filter((_, i) => i !== trackIndex))
+                  }
+                />
               </div>
               <div className="flex items-center gap-3">
                 <ImportDropzone onFiles={importFiles} compact />
