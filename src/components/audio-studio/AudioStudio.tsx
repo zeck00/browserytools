@@ -24,6 +24,7 @@ import { TrackControls } from "./TrackControls";
 import { TransportBar } from "./TransportBar";
 import { EffectsPanel } from "./EffectsPanel";
 import { RecordControl, type LiveRecordingState } from "./RecordControl";
+import { ExportDialog } from "./ExportDialog";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -244,7 +245,13 @@ export default function AudioStudio() {
                 </span>
               </div>
               <EffectsPanel tracks={tracks} master={master} perTrack={perTrack} />
-              {/* TODO(task 9): <ExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks} /> */}
+              <ExportDialog
+                open={exportOpen}
+                onOpenChange={setExportOpen}
+                tracks={tracks}
+                master={master}
+                perTrack={perTrack}
+              />
             </div>
           </ClipInteractionProvider>
         </WaveformPlaylistProvider>
