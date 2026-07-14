@@ -390,7 +390,7 @@ export const tools: ToolCategory[] = [
         order: 2,
         creationDate: "2025-08-20",
         description:
-          "Play audio files with adjustable volume and speed, view the waveform, and download your file.",
+          "Edit audio on a multi-track timeline: arrange and split clips, mix with effects, record from your mic, and export to WAV, MP3, OGG, or FLAC. Free, private, no upload.",
       },
       {
         name: "Mic & Camera Tester",

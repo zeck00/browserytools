@@ -157,7 +157,7 @@
       },
       "audio": {
         "name": "Audio Editor",
-        "description": "Play audio files with adjustable volume and speed, view the waveform, and download your file."
+        "description": "Edit audio on a multi-track timeline: arrange and split clips, mix with effects, record from your mic, and export to WAV, MP3, OGG, or FLAC. Free, private, no upload."
       },
       "mic-camera": {
         "name": "Mic & Camera Tester",

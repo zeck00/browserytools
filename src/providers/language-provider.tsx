@@ -1,6 +1,6 @@
 "use client";
 
-import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import { NextIntlClientProvider } from "next-intl";
 import { useLanguageStore } from "@/store/language-store";
 import { getDir, matchLocale, type Locale } from "@/lib/locales";
 import { useEffect, useRef, useState } from "react";
@@ -15,13 +15,7 @@ import ruMessages from "../../messages/ru.json";
 import idMessages from "../../messages/id.json";
 import zhCNMessages from "../../messages/zh-CN.json";
 
-// `AbstractIntlMessages` (not `typeof enMessages`) — non-`en` locale files are
-// translated incrementally (see Task 4 report) and don't yet mirror every key
-// en.json has (e.g. Tools.AudioEditor's new key set). next-intl only needs
-// `DeepPartial<Messages>` at the provider boundary; requiring exact structural
-// parity with `en` here was stricter than that and broke the moment any
-// locale file lagged en.json.
-const messages: Record<Locale, AbstractIntlMessages> = {
+const messages: Record<Locale, typeof enMessages> = {
   en: enMessages,
   ar: arMessages,
   es: esMessages,
