@@ -57,6 +57,7 @@ export function TrackControls({ trackIndex, tracks }: { trackIndex: number; trac
           min={0} max={1} step={0.01} value={[state.volume]}
           onValueChange={([v]) => setTrackVolume(trackIndex, v)}
           className="w-24"
+          aria-label={t("volume")}
         />
       </label>
       <label className="flex items-center gap-2">
@@ -65,6 +66,7 @@ export function TrackControls({ trackIndex, tracks }: { trackIndex: number; trac
           min={-1} max={1} step={0.05} value={[state.pan]}
           onValueChange={([v]) => setTrackPan(trackIndex, v)}
           className="w-24"
+          aria-label={t("pan")}
         />
       </label>
     </div>
