@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -22,7 +22,7 @@ export function TransportBar({ tracks }: { tracks: ClipTrack[] }) {
   const { play, pause, stop, zoomIn, zoomOut, undo, redo, formatTime } = usePlaylistControls();
   const { canUndo, canRedo, selectionStart, selectionEnd, selectedTrackId } = usePlaylistState();
   const { playoutRef, samplesPerPixel, sampleRate, duration } = usePlaylistData();
-  const { isPlaying, currentTime } = usePlaybackAnimation();
+  const { isPlaying } = usePlaybackAnimation();
   const { splitClipAtPlayhead } = useClipSplitting({ tracks, samplesPerPixel, engineRef: playoutRef });
   const [fadeSec, setFadeSec] = useState(1);
 
@@ -74,7 +74,7 @@ export function TransportBar({ tracks }: { tracks: ClipTrack[] }) {
         <Square className="size-4" />
       </Button>
       <span className="mx-2 min-w-24 font-mono text-sm tabular-nums" data-testid="transport-time">
-        {formatTime(currentTime)} / {formatTime(duration)}
+        <LiveTime formatTime={formatTime} /> / {formatTime(duration)}
       </span>
       <Button size="sm" variant="ghost" onClick={zoomIn} aria-label={t("zoomIn")}><ZoomIn className="size-4" /></Button>
       <Button size="sm" variant="ghost" onClick={zoomOut} aria-label={t("zoomOut")}><ZoomOut className="size-4" /></Button>
@@ -100,4 +100,58 @@ export function TransportBar({ tracks }: { tracks: ClipTrack[] }) {
       />
     </div>
   );
+}
+
+/**
+ * Live current-time readout for the transport clock.
+ *
+ * `usePlaybackAnimation().currentTime` is React state that the library only
+ * updates on pause/stop/seek/loop-boundaries — it does NOT tick during
+ * playback (the 60fps position updates only ever touch `currentTimeRef` and
+ * the shared frame-callback registry, never `setState`). Rendering
+ * `formatTime(currentTime)` directly therefore freezes the clock while
+ * playing.
+ *
+ * This mirrors the library's own `AudioPosition` component exactly
+ * (node_modules/@waveform-playlist/browser/dist/index.mjs ~L3588-3610):
+ *  - while playing, a registered frame callback imperatively writes
+ *    `formatTime(time)` into the span's `textContent` at animation-frame
+ *    rate, bypassing React re-renders;
+ *  - an unconditional effect (no dependency array, runs after every render)
+ *    re-syncs `textContent` from `currentTimeRef.current` whenever not
+ *    playing. This is what keeps the readout correct immediately after
+ *    pause/stop/seek even though the frame callback has gone quiet: this
+ *    component re-renders on those transitions because
+ *    `usePlaybackAnimation()` subscribes to the whole animation context, and
+ *    the context value object is recreated whenever ANY of its state
+ *    (including the `currentTime` state field) changes — so no explicit
+ *    `currentTime` dependency is needed here, exactly as in `AudioPosition`.
+ *  - the initial render (and every render) also renders
+ *    `formatTime(currentTimeRef.current)` as JSX children so the correct
+ *    paused position is visible immediately on mount, before any effect
+ *    runs.
+ */
+function LiveTime({ formatTime }: { formatTime: (seconds: number) => string }) {
+  const spanRef = useRef<HTMLSpanElement>(null);
+  const { isPlaying, currentTimeRef, registerFrameCallback, unregisterFrameCallback } = usePlaybackAnimation();
+
+  useEffect(() => {
+    const id = "transport-bar-current-time";
+    if (isPlaying) {
+      registerFrameCallback(id, ({ time }) => {
+        if (spanRef.current) {
+          spanRef.current.textContent = formatTime(time);
+        }
+      });
+    }
+    return () => unregisterFrameCallback(id);
+  }, [isPlaying, formatTime, registerFrameCallback, unregisterFrameCallback]);
+
+  useEffect(() => {
+    if (!isPlaying && spanRef.current) {
+      spanRef.current.textContent = formatTime(currentTimeRef.current ?? 0);
+    }
+  });
+
+  return <span ref={spanRef}>{formatTime(currentTimeRef.current ?? 0)}</span>;
 }
