@@ -10,7 +10,7 @@ import {
   KeyboardShortcuts,
 } from "@waveform-playlist/browser";
 import { useDynamicEffects, useTrackDynamicEffects } from "@waveform-playlist/browser/tone";
-import type { ClipTrack } from "@waveform-playlist/core";
+import { createTrack, type ClipTrack } from "@waveform-playlist/core";
 import { ToolShell } from "@/components/template/tool-shell";
 import { useWaveformTheme } from "@/lib/audio/waveform-theme";
 import {
@@ -23,6 +23,7 @@ import { ImportDropzone } from "./ImportDropzone";
 import { TrackControls } from "./TrackControls";
 import { TransportBar } from "./TransportBar";
 import { EffectsPanel } from "./EffectsPanel";
+import { RecordControl, type LiveRecordingState } from "./RecordControl";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -32,6 +33,7 @@ export default function AudioStudio() {
   const [tracks, setTracks] = useState<ClipTrack[]>([]);
   const [exportOpen, setExportOpen] = useState(false);
   const [warnedBig, setWarnedBig] = useState(false);
+  const [recordingState, setRecordingState] = useState<LiveRecordingState | undefined>(undefined);
   const theme = useWaveformTheme();
   const tracksRef = useRef<ClipTrack[]>([]);
   tracksRef.current = tracks;
@@ -111,6 +113,20 @@ export default function AudioStudio() {
         if (tr.effects !== wrapper) tr.effects = wrapper;
       }
       setTracks(next);
+    },
+    [getEffectsWrapper]
+  );
+
+  // Task 8 recording: RecordControl needs to create a brand-new track for the
+  // armed record slot. Wrapper attachment must happen at creation time (see
+  // the comment above), so RecordControl never calls core's `createTrack`
+  // directly — it asks AudioStudio to do it, keeping the single attachment
+  // point importFiles already established.
+  const createArmedTrack = useCallback(
+    (name: string): ClipTrack => {
+      const track = createTrack({ name, clips: [] });
+      track.effects = getEffectsWrapper(track.id);
+      return track;
     },
     [getEffectsWrapper]
   );
@@ -196,11 +212,17 @@ export default function AudioStudio() {
                     />
                   )}
                   onRemoveTrack={removeTrack}
+                  recordingState={recordingState}
                 />
               </div>
               <div className="flex items-center gap-3">
                 <ImportDropzone onFiles={importFiles} compact />
-                {/* TODO(task 8): <RecordControl tracks={tracks} setTracks={setTracks} /> */}
+                <RecordControl
+                  tracks={tracks}
+                  setTracks={setTracks}
+                  onRecordingState={setRecordingState}
+                  createArmedTrack={createArmedTrack}
+                />
                 <span className="ms-auto text-sm opacity-60">
                   {t("trackCount", { count: tracks.length })}
                 </span>
