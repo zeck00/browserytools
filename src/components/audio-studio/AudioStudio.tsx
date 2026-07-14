@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   ClipInteractionProvider,
   KeyboardShortcuts,
 } from "@waveform-playlist/browser";
+import { useDynamicEffects, useTrackDynamicEffects } from "@waveform-playlist/browser/tone";
 import type { ClipTrack } from "@waveform-playlist/core";
 import { ToolShell } from "@/components/template/tool-shell";
 import { useWaveformTheme } from "@/lib/audio/waveform-theme";
@@ -21,6 +22,7 @@ import {
 import { ImportDropzone } from "./ImportDropzone";
 import { TrackControls } from "./TrackControls";
 import { TransportBar } from "./TransportBar";
+import { EffectsPanel } from "./EffectsPanel";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -33,6 +35,32 @@ export default function AudioStudio() {
   const theme = useWaveformTheme();
   const tracksRef = useRef<ClipTrack[]>([]);
   tracksRef.current = tracks;
+
+  // Effects hooks are unconditional (must run every render, even before any
+  // tracks are imported) and independent of WaveformPlaylistProvider's React
+  // context — they manage their own state/refs and only hand the provider
+  // plain functions (`masterEffects`, `getTrackEffectsFunction(id)`) that the
+  // provider invokes once per engine (re)build to seed the Tone.js graph.
+  // Task 9's ExportDialog reads `master.createOfflineEffectsFunction` and
+  // `perTrack.createOfflineTrackEffectsFunction` from these same hook results.
+  const master = useDynamicEffects();
+  const perTrack = useTrackDynamicEffects();
+  const tracksWithEffects = useMemo(
+    () =>
+      tracks.map((tr) => ({
+        ...tr,
+        // `getTrackEffectsFunction` returns @waveform-playlist/playout's
+        // TrackEffectsFunction (concrete Tone `Gain`/`ToneAudioNode` params),
+        // while ClipTrack.effects is typed against @waveform-playlist/core's
+        // TrackEffectsFunction (params erased to `unknown` so core stays
+        // Tone-agnostic). The runtime engine invokes this field with real
+        // Tone nodes either way — the two declared types are structurally
+        // incompatible only because of that intentional erasure, so the cast
+        // here is safe.
+        effects: perTrack.getTrackEffectsFunction(tr.id) as ClipTrack["effects"],
+      })),
+    [tracks, perTrack.getTrackEffectsFunction]
+  );
 
   const importFiles = useCallback(
     async (files: File[]) => {
@@ -73,8 +101,9 @@ export default function AudioStudio() {
         <ImportDropzone onFiles={importFiles} />
       ) : (
         <WaveformPlaylistProvider
-          tracks={tracks}
+          tracks={tracksWithEffects}
           onTracksChange={setTracks}
+          effects={master.masterEffects}
           sampleRate={STUDIO_SAMPLE_RATE}
           timescale
           waveHeight={96}
@@ -104,7 +133,7 @@ export default function AudioStudio() {
                   {t("trackCount", { count: tracks.length })}
                 </span>
               </div>
-              {/* TODO(task 7): <EffectsPanel tracks={tracks} /> */}
+              <EffectsPanel tracks={tracks} master={master} perTrack={perTrack} />
               {/* TODO(task 9): <ExportDialog open={exportOpen} onOpenChange={setExportOpen} tracks={tracks} /> */}
             </div>
           </ClipInteractionProvider>
