@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -29,6 +29,8 @@ export default function AudioStudio() {
   const [exportOpen, setExportOpen] = useState(false);
   const [warnedBig, setWarnedBig] = useState(false);
   const theme = useWaveformTheme();
+  const tracksRef = useRef<ClipTrack[]>([]);
+  tracksRef.current = tracks;
 
   const importFiles = useCallback(
     async (files: File[]) => {
@@ -44,15 +46,12 @@ export default function AudioStudio() {
         }
       }
       if (added.length === 0) return;
-      setTracks((prev) => {
-        const next = [...prev, ...added]; // append-only keeps undo history
-        const bytes = estimateDecodedBytes(next);
-        if (!warnedBig && bytes > BIG_SESSION_BYTES) {
-          toast.warning(t("bigSessionWarning", { mb: Math.round(bytes / 1024 / 1024) }));
-          setWarnedBig(true);
-        }
-        return next;
-      });
+      setTracks((prev) => [...prev, ...added]);
+      const bytes = estimateDecodedBytes([...tracksRef.current, ...added]);
+      if (!warnedBig && bytes > BIG_SESSION_BYTES) {
+        toast.warning(t("bigSessionWarning", { mb: Math.round(bytes / 1024 / 1024) }));
+        setWarnedBig(true);
+      }
     },
     [t, warnedBig]
   );
