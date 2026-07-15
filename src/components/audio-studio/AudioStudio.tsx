@@ -231,21 +231,6 @@ export default function AudioStudio() {
     [perTrack, recordingState, t]
   );
 
-  // On first mount, offer to restore a previously-saved session (only when the
-  // editor is empty — a fresh visit).
-  useEffect(() => {
-    if (tracksRef.current.length > 0) return;
-    let cancelled = false;
-    hasSession()
-      .then((has) => {
-        if (!cancelled && has) setSavedSessionAvailable(true);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const restoreSession = useCallback(async () => {
     const descriptor = await getDescriptor().catch(() => undefined);
     if (!descriptor) {
@@ -279,6 +264,34 @@ export default function AudioStudio() {
     sourceKeysRef.current.clear();
     setSavedSessionAvailable(false);
   }, []);
+
+  // On mount, decide what to do with a saved session. `editorActive` can only
+  // be true here after a client-side (SPA) navigation back into the editor —
+  // a full reload resets the Zustand store. In that case the in-memory tracks
+  // were lost on unmount, so auto-restore them straight back into the editor
+  // (or drop to the landing if nothing was saved). On a fresh visit / reload,
+  // offer the restore prompt instead.
+  useEffect(() => {
+    if (tracksRef.current.length > 0) return;
+    const returnedToEditor = useEditorModeStore.getState().active;
+    let cancelled = false;
+    hasSession()
+      .then((has) => {
+        if (cancelled) return;
+        if (returnedToEditor) {
+          if (has) restoreSession();
+          else exitEditor();
+        } else if (has) {
+          setSavedSessionAvailable(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled && returnedToEditor) exitEditor();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [restoreSession, exitEditor]);
 
   // beforeunload guard: warn only when there are genuinely unsaved edits (the
   // debounced autosave hasn't flushed yet), so a normal saved state never nags.
