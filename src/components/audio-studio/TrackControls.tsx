@@ -75,7 +75,10 @@ export function TrackControls({
         "flex h-full flex-col justify-center gap-2 border-s-2 px-3.5 py-2.5 " +
         (selected ? "border-[var(--bt-accent)]" : "border-transparent")
       }
-      onClick={() => setSelectedTrackId(track.id)}
+      // Capture-phase so a pointer-down ANYWHERE in the panel selects the track
+      // before a child (e.g. a Radix slider, which swallows the click) handles
+      // it — the control still works afterward.
+      onPointerDownCapture={() => setSelectedTrackId(track.id)}
       data-testid={`track-controls-${trackIndex}`}
     >
       <div className="flex items-center gap-1">
@@ -101,9 +104,9 @@ export function TrackControls({
           </button>
         )}
       </div>
-      {/* Interacting with any control also selects the track (the click
-          bubbles to the panel's onClick) — natural, and keeps the effects
-          inspector in sync with what you're touching. */}
+      {/* Selection is handled by the panel's onPointerDownCapture, so touching
+          any control here also selects the track and keeps the effects
+          inspector in sync with what you're editing. */}
       <div className="flex gap-1.5">
         <TogglePill
           active={state.muted}

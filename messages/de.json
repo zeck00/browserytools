@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "Bitte wähle einen gültigen Schnittbereich."
     },
     "AudioEditor": {
+      "restoreTitle": "Letzte Sitzung wiederherstellen?",
+      "restoreHint": "Wir haben deine Spuren vom letzten Besuch gespeichert.",
+      "restore": "Wiederherstellen",
+      "discard": "Verwerfen",
+      "restoreFailed": "Letzte Sitzung konnte nicht wiederhergestellt werden.",
       "exit": "Beenden",
       "openEditor": "Editor öffnen",
       "sessionReady": "Deine Sitzung ist bereit zum Weiterbearbeiten.",

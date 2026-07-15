@@ -21,6 +21,13 @@ import {
   estimateDecodedBytes,
   STUDIO_SAMPLE_RATE,
 } from "@/lib/audio/import";
+import {
+  hasSession,
+  getDescriptor,
+  getAudio,
+  clearSession,
+} from "@/lib/audio/session-store";
+import { rehydrate } from "@/lib/audio/session-serialize";
 import { AudioLanding } from "./AudioLanding";
 import { ImportDropzone } from "./ImportDropzone";
 import { TrackControls } from "./TrackControls";
@@ -28,6 +35,11 @@ import { TransportBar } from "./TransportBar";
 import { EffectsPanel } from "./EffectsPanel";
 import { RecordControl, type LiveRecordingState } from "./RecordControl";
 import { ExportDialog } from "./ExportDialog";
+import {
+  SessionPersistence,
+  RestoreEffectsApplier,
+  type PendingEffects,
+} from "./session-persistence";
 
 const BIG_SESSION_BYTES = 500 * 1024 * 1024;
 const LONG_FILE_SECONDS = 30 * 60;
@@ -41,6 +53,14 @@ export default function AudioStudio() {
   const theme = useWaveformTheme();
   const tracksRef = useRef<ClipTrack[]>([]);
   tracksRef.current = tracks;
+
+  // Session persistence (Part C): source-audio blob keys (trackId -> IndexedDB
+  // key), a dirty flag the beforeunload guard reads, whether a restorable
+  // session exists, and effect chains queued for re-application after restore.
+  const sourceKeysRef = useRef<Map<string, string>>(new Map());
+  const dirtyRef = useRef(false);
+  const [savedSessionAvailable, setSavedSessionAvailable] = useState(false);
+  const [pendingEffects, setPendingEffects] = useState<PendingEffects | null>(null);
 
   // Editor focus mode (editor-mode-store): while active, the editor stamps
   // :root[data-editor="on"] so the shell hides the rail, drops the content
@@ -152,6 +172,12 @@ export default function AudioStudio() {
 
   const importFiles = useCallback(
     async (files: File[]) => {
+      // Dropping files instead of restoring = start fresh: drop the old saved
+      // session (and its blobs) so autosave writes a clean one.
+      if (savedSessionAvailable) {
+        await clearSession().catch(() => {});
+        setSavedSessionAvailable(false);
+      }
       const added: ClipTrack[] = [];
       for (const file of files) {
         try {
@@ -175,7 +201,7 @@ export default function AudioStudio() {
       // Importing audio opens the editor focus mode.
       enterEditor();
     },
-    [t, warnedBig, getEffectsWrapper, enterEditor]
+    [t, warnedBig, getEffectsWrapper, enterEditor, savedSessionAvailable]
   );
 
   // Dispose the removed track's live Tone.js effect instances (finding 2:
@@ -205,6 +231,68 @@ export default function AudioStudio() {
     [perTrack, recordingState, t]
   );
 
+  // On first mount, offer to restore a previously-saved session (only when the
+  // editor is empty — a fresh visit).
+  useEffect(() => {
+    if (tracksRef.current.length > 0) return;
+    let cancelled = false;
+    hasSession()
+      .then((has) => {
+        if (!cancelled && has) setSavedSessionAvailable(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const restoreSession = useCallback(async () => {
+    const descriptor = await getDescriptor().catch(() => undefined);
+    if (!descriptor) {
+      setSavedSessionAvailable(false);
+      return;
+    }
+    const { tracks: restored, audioKeys, trackEffects, masterEffects } = await rehydrate(
+      descriptor,
+      getAudio,
+      decodeAudioFile
+    );
+    if (restored.length === 0) {
+      toast.error(t("restoreFailed"));
+      setSavedSessionAvailable(false);
+      return;
+    }
+    // Reuse the stored blobs: map each restored track's new id to its key +
+    // attach the effects wrapper at "creation" (same contract as import).
+    restored.forEach((tr, i) => {
+      sourceKeysRef.current.set(tr.id, audioKeys[i]);
+      tr.effects = getEffectsWrapper(tr.id);
+    });
+    setTracks(restored);
+    setPendingEffects({ trackEffects, masterEffects });
+    setSavedSessionAvailable(false);
+    enterEditor();
+  }, [t, getEffectsWrapper, enterEditor]);
+
+  const discardSession = useCallback(async () => {
+    await clearSession().catch(() => {});
+    sourceKeysRef.current.clear();
+    setSavedSessionAvailable(false);
+  }, []);
+
+  // beforeunload guard: warn only when there are genuinely unsaved edits (the
+  // debounced autosave hasn't flushed yet), so a normal saved state never nags.
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
   // Landing: normal ToolShell page (SEO/crumb/title/related kept). Importing
   // audio, or "Open editor" on a resumed session, enters the editor.
   if (!editorActive) {
@@ -213,6 +301,9 @@ export default function AudioStudio() {
         trackCount={tracks.length}
         onFiles={importFiles}
         onOpenEditor={enterEditor}
+        canRestore={savedSessionAvailable}
+        onRestore={restoreSession}
+        onDiscard={discardSession}
       />
     );
   }
@@ -312,6 +403,22 @@ export default function AudioStudio() {
             master={master}
             perTrack={perTrack}
           />
+          <SessionPersistence
+            tracks={tracks}
+            master={master}
+            perTrack={perTrack}
+            sourceKeysRef={sourceKeysRef}
+            dirtyRef={dirtyRef}
+          />
+          {pendingEffects && (
+            <RestoreEffectsApplier
+              pending={pendingEffects}
+              tracks={tracks}
+              master={master}
+              perTrack={perTrack}
+              onDone={() => setPendingEffects(null)}
+            />
+          )}
         </div>
       </ClipInteractionProvider>
     </WaveformPlaylistProvider>

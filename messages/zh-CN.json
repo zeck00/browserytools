@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "请选择有效的裁剪范围。"
     },
     "AudioEditor": {
+      "restoreTitle": "恢复上次的会话？",
+      "restoreHint": "我们保存了你上次的音轨。",
+      "restore": "恢复",
+      "discard": "放弃",
+      "restoreFailed": "无法恢复上次的会话。",
       "exit": "退出",
       "openEditor": "打开编辑器",
       "sessionReady": "你的会话已就绪，可继续编辑。",

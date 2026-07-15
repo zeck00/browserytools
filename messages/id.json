@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "Silakan pilih rentang potongan yang valid."
     },
     "AudioEditor": {
+      "restoreTitle": "Pulihkan sesi terakhir Anda?",
+      "restoreHint": "Kami menyimpan trek Anda dari kunjungan sebelumnya.",
+      "restore": "Pulihkan",
+      "discard": "Buang",
+      "restoreFailed": "Tidak dapat memulihkan sesi terakhir Anda.",
       "exit": "Keluar",
       "openEditor": "Buka editor",
       "sessionReady": "Sesi Anda siap untuk melanjutkan pengeditan.",

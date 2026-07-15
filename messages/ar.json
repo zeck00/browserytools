@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "يرجى تحديد نطاق قص صالح."
     },
     "AudioEditor": {
+      "restoreTitle": "استعادة جلستك الأخيرة؟",
+      "restoreHint": "حفظنا مساراتك من زيارتك السابقة.",
+      "restore": "استعادة",
+      "discard": "تجاهل",
+      "restoreFailed": "تعذّرت استعادة جلستك الأخيرة.",
       "exit": "خروج",
       "openEditor": "فتح المحرّر",
       "sessionReady": "جلستك جاهزة لمتابعة التحرير.",

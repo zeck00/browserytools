@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "Please select a valid trim range."
     },
     "AudioEditor": {
+      "restoreTitle": "Restore your last session?",
+      "restoreHint": "We saved your tracks from your previous visit.",
+      "restore": "Restore",
+      "discard": "Discard",
+      "restoreFailed": "Couldn't restore your last session.",
       "exit": "Exit",
       "openEditor": "Open editor",
       "sessionReady": "Your session is ready to keep editing.",

@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "Veuillez sélectionner une plage de découpe valide."
     },
     "AudioEditor": {
+      "restoreTitle": "Restaurer votre dernière session ?",
+      "restoreHint": "Nous avons enregistré vos pistes de votre dernière visite.",
+      "restore": "Restaurer",
+      "discard": "Ignorer",
+      "restoreFailed": "Impossible de restaurer votre dernière session.",
       "exit": "Quitter",
       "openEditor": "Ouvrir l'éditeur",
       "sessionReady": "Votre session est prête pour continuer l'édition.",

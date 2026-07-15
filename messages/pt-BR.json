@@ -1005,6 +1005,11 @@
       "gifInvalidRange": "Selecione um intervalo de corte válido."
     },
     "AudioEditor": {
+      "restoreTitle": "Restaurar sua última sessão?",
+      "restoreHint": "Salvamos suas faixas da sua visita anterior.",
+      "restore": "Restaurar",
+      "discard": "Descartar",
+      "restoreFailed": "Não foi possível restaurar sua última sessão.",
       "exit": "Sair",
       "openEditor": "Abrir editor",
       "sessionReady": "Sua sessão está pronta para continuar editando.",
