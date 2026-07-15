@@ -1,106 +1,177 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   useDynamicEffects,
   useTrackDynamicEffects,
+  effectDefinitions,
+  effectCategories,
+  getEffectDefinition,
 } from "@waveform-playlist/browser/tone";
 import { usePlaylistState } from "@waveform-playlist/browser";
 import type { ClipTrack } from "@waveform-playlist/core";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SliderRow } from "@/components/shared/SliderRow";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, X } from "lucide-react";
 
-type EffectParam = { name: string; min: number; max: number; step: number; default: number };
-const CURATED: { id: string; labelKey: string; params: EffectParam[] }[] = [
-  {
-    id: "eq3",
-    labelKey: "effectEq3",
-    params: [
-      { name: "low", min: -24, max: 24, step: 0.5, default: 0 },
-      { name: "mid", min: -24, max: 24, step: 0.5, default: 0 },
-      { name: "high", min: -24, max: 24, step: 0.5, default: 0 },
-    ],
-  },
-  {
-    id: "reverb",
-    labelKey: "effectReverb",
-    params: [
-      { name: "decay", min: 0.1, max: 10, step: 0.1, default: 1.5 },
-      { name: "wet", min: 0, max: 1, step: 0.01, default: 0.35 },
-    ],
-  },
-  {
-    id: "feedbackDelay",
-    labelKey: "effectFeedbackDelay",
-    params: [
-      { name: "delayTime", min: 0.01, max: 1, step: 0.01, default: 0.25 },
-      { name: "feedback", min: 0, max: 0.95, step: 0.01, default: 0.4 },
-      { name: "wet", min: 0, max: 1, step: 0.01, default: 0.35 },
-    ],
-  },
-  {
-    id: "compressor",
-    labelKey: "effectCompressor",
-    params: [
-      { name: "threshold", min: -60, max: 0, step: 1, default: -24 },
-      { name: "ratio", min: 1, max: 20, step: 0.5, default: 4 },
-      { name: "attack", min: 0.001, max: 1, step: 0.001, default: 0.003 },
-      { name: "release", min: 0.01, max: 1, step: 0.01, default: 0.25 },
-    ],
-  },
-];
+type ParamValue = number | string | boolean;
 
-// Narrows the library's ActiveEffect / TrackActiveEffect entries (from
-// @waveform-playlist/browser/tone) to the fields this panel reads. Verified
-// against node_modules/@waveform-playlist/browser/dist/tone.d.ts: the active
-// parameter bag is named `params` (not `parameters`), values are
-// `number | string | boolean` (our curated effects only ever store numbers),
-// and `bypassed` is a required boolean there — optional here is a safe widening.
+// The library's active-effect entries (from @waveform-playlist/browser/tone),
+// narrowed to what this panel reads. `params` is the current value bag.
 type ActiveLike = {
   instanceId: string;
   effectId: string;
-  params?: Record<string, number | string | boolean>;
-  bypassed?: boolean;
+  params?: Record<string, ParamValue>;
 };
 
-function formatParam(value: number, step: number): string {
-  if (step >= 1) return String(Math.round(value));
-  if (step >= 0.1) return value.toFixed(1);
-  return value.toFixed(2);
+type EffectParam = (typeof effectDefinitions)[number]["parameters"][number];
+
+function formatNumber(v: number, param: EffectParam): string {
+  const step = param.step ?? 0.01;
+  const r = step >= 1 ? Math.round(v) : step >= 0.1 ? Number(v.toFixed(1)) : Number(v.toFixed(2));
+  return param.unit ? `${r} ${param.unit}` : String(r);
 }
 
 /**
- * One effect parameter, controlled by local state so the slider reflects the
- * user's own drags without depending on the effects hook re-emitting `params`
- * per tick (it seeds from the active param value / curated default). Remounted
- * per effect instance via the parent's `key`, so switching tracks or re-adding
- * an effect resets cleanly.
+ * One effect parameter, controlled by local state so the control reflects the
+ * user's own edits without depending on the effects hook re-emitting `params`.
+ * Renders by parameter type — number (slider), select (dropdown), boolean
+ * (switch) — so the full library catalog is editable, not just numeric effects.
+ * Remounted per effect instance via the parent key, so it resets cleanly.
  */
-function EffectParamRow({
+function ParamControl({
   param,
   initial,
   onChange,
 }: {
   param: EffectParam;
-  initial: number;
-  onChange: (value: number) => void;
+  initial: ParamValue;
+  onChange: (value: ParamValue) => void;
 }) {
-  const [value, setValue] = useState(initial);
+  const [value, setValue] = useState<ParamValue>(initial);
+  const set = (v: ParamValue) => {
+    setValue(v);
+    onChange(v);
+  };
+
+  if (param.type === "number") {
+    const num = typeof value === "number" ? value : Number(value);
+    return (
+      <SliderRow
+        label={param.label}
+        value={num}
+        display={formatNumber(num, param)}
+        min={param.min ?? 0}
+        max={param.max ?? 1}
+        step={param.step ?? 0.01}
+        onChange={(v) => set(v)}
+      />
+    );
+  }
+
+  if (param.type === "select") {
+    return (
+      <label className="flex items-center justify-between gap-3 text-[13px] text-[var(--bt-ink)]">
+        <span>{param.label}</span>
+        <Select value={String(value)} onValueChange={(v) => set(v)}>
+          <SelectTrigger className="h-8 w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {param.options?.map((o) => (
+              <SelectItem key={String(o.value)} value={String(o.value)}>
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </label>
+    );
+  }
+
+  // boolean
   return (
-    <SliderRow
-      label={param.name}
-      value={value}
-      display={formatParam(value, param.step)}
-      min={param.min}
-      max={param.max}
-      step={param.step}
-      onChange={(v) => {
-        setValue(v);
-        onChange(v);
-      }}
-    />
+    <label className="flex items-center justify-between gap-3 text-[13px] text-[var(--bt-ink)]">
+      <span>{param.label}</span>
+      <Switch checked={Boolean(value)} onCheckedChange={(c) => set(c)} />
+    </label>
+  );
+}
+
+function AddEffectPicker({ onAdd }: { onAdd: (effectId: string) => void }) {
+  const t = useTranslations("Tools.AudioEditor");
+  const tc = useTranslations("Common");
+  const [open, setOpen] = useState(false);
+
+  const grouped = useMemo(
+    () =>
+      effectCategories
+        .map((cat) => ({ cat, defs: effectDefinitions.filter((d) => d.category === cat.id) }))
+        .filter((g) => g.defs.length > 0),
+    []
+  );
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--bt-line)] bg-[var(--bt-surface)] px-3 text-[13px] font-medium text-[var(--bt-ink)] transition-colors hover:bg-[var(--bt-hover)]"
+      >
+        <Plus className="size-4 opacity-60" />
+        {t("addEffect")}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--bt-line)] bg-[var(--bt-surface)] p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-[13px] font-semibold text-[var(--bt-ink)]">{t("addEffect")}</span>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="grid size-6 place-items-center rounded-md text-[var(--bt-muted)] hover:bg-[var(--bt-hover)] hover:text-[var(--bt-ink)]"
+          aria-label={tc("close")}
+        >
+          <X className="size-3.5" />
+        </button>
+      </div>
+      <div className="flex max-h-72 flex-col gap-3 overflow-auto">
+        {grouped.map(({ cat, defs }) => (
+          <div key={cat.id}>
+            <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wide text-[var(--bt-muted)]">
+              {cat.name}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {defs.map((def) => (
+                <button
+                  key={def.id}
+                  type="button"
+                  title={def.description}
+                  onClick={() => {
+                    onAdd(def.id);
+                    setOpen(false);
+                  }}
+                  className="inline-flex h-7 items-center rounded-full border border-[var(--bt-line)] bg-[var(--bt-bg)] px-2.5 text-xs font-medium text-[var(--bt-ink)] transition-colors hover:bg-[var(--bt-hover)]"
+                >
+                  {def.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -113,26 +184,13 @@ function EffectChain({
   active: ActiveLike[];
   onAdd: (effectId: string) => void;
   onRemove: (instanceId: string) => void;
-  onParam: (instanceId: string, param: string, value: number) => void;
+  onParam: (instanceId: string, param: string, value: ParamValue) => void;
 }) {
   const t = useTranslations("Tools.AudioEditor");
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5">
-        {CURATED.map((def) => (
-          <button
-            key={def.id}
-            type="button"
-            onClick={() => onAdd(def.id)}
-            className="inline-flex h-7 items-center gap-1 rounded-full border border-[var(--bt-line)] bg-[var(--bt-surface)] px-2.5 text-xs font-medium text-[var(--bt-ink)] transition-colors hover:bg-[var(--bt-hover)]"
-          >
-            <Plus className="size-3.5 opacity-60" />
-            {t(def.labelKey as Parameters<typeof t>[0])}
-          </button>
-        ))}
-      </div>
       {active.map((fx) => {
-        const def = CURATED.find((d) => d.id === fx.effectId);
+        const def = getEffectDefinition(fx.effectId);
         if (!def) return null;
         return (
           <div
@@ -140,9 +198,7 @@ function EffectChain({
             className="rounded-lg border border-[var(--bt-line)] bg-[var(--bt-surface)] p-3"
           >
             <div className="mb-2.5 flex items-center justify-between">
-              <span className="text-[13px] font-semibold text-[var(--bt-ink)]">
-                {t(def.labelKey as Parameters<typeof t>[0])}
-              </span>
+              <span className="text-[13px] font-semibold text-[var(--bt-ink)]">{def.name}</span>
               <button
                 type="button"
                 onClick={() => onRemove(fx.instanceId)}
@@ -153,11 +209,11 @@ function EffectChain({
               </button>
             </div>
             <div className="flex flex-col gap-2.5">
-              {def.params.map((p) => (
-                <EffectParamRow
+              {def.parameters.map((p) => (
+                <ParamControl
                   key={p.name}
                   param={p}
-                  initial={(fx.params?.[p.name] as number | undefined) ?? p.default}
+                  initial={fx.params?.[p.name] ?? p.default}
                   onChange={(v) => onParam(fx.instanceId, p.name, v)}
                 />
               ))}
@@ -165,6 +221,7 @@ function EffectChain({
           </div>
         );
       })}
+      <AddEffectPicker onAdd={onAdd} />
     </div>
   );
 }

@@ -64,12 +64,17 @@ describe("buildDescriptor", () => {
 });
 
 describe("serializeEffects", () => {
-  it("keeps only numeric params (drops the library's non-number values)", () => {
+  it("snapshots all param types (number, string, boolean)", () => {
     expect(
-      serializeEffects([
-        { effectId: "eq3", params: { low: 3, mid: 0, label: "x" as unknown as number } },
-      ])
-    ).toEqual([{ effectId: "eq3", params: { low: 3, mid: 0 } }]);
+      serializeEffects([{ effectId: "filter", params: { frequency: 800, type: "highpass", on: true } }])
+    ).toEqual([{ effectId: "filter", params: { frequency: 800, type: "highpass", on: true } }]);
+  });
+
+  it("copies params so later live mutations don't leak into the snapshot", () => {
+    const live = { low: 3 };
+    const out = serializeEffects([{ effectId: "eq3", params: live }]);
+    live.low = 99;
+    expect(out[0].params.low).toBe(3);
   });
 
   it("handles effects with no params", () => {

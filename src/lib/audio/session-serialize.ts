@@ -17,7 +17,7 @@ import {
 
 export interface SerializedEffect {
   effectId: string;
-  params: Record<string, number>;
+  params: Record<string, number | string | boolean>;
 }
 
 export interface SerializedClip {
@@ -53,17 +53,12 @@ export interface TrackPersistInput {
   effects: SerializedEffect[];
 }
 
-/** Keep only numeric params (our curated effects) from a library active-effect bag. */
+/** Snapshot an active-effect chain to a serializable form (all Tone param
+ *  types — number, string, boolean — round-trip via updateParameter). */
 export function serializeEffects(
   active: { effectId: string; params?: Record<string, number | string | boolean> }[]
 ): SerializedEffect[] {
-  return active.map((fx) => {
-    const params: Record<string, number> = {};
-    for (const [k, v] of Object.entries(fx.params ?? {})) {
-      if (typeof v === "number") params[k] = v;
-    }
-    return { effectId: fx.effectId, params };
-  });
+  return active.map((fx) => ({ effectId: fx.effectId, params: { ...(fx.params ?? {}) } }));
 }
 
 export function buildDescriptor(
