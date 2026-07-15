@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Veuillez sélectionner une plage de découpe valide."
     },
     "AudioEditor": {
+      "exit": "Quitter",
+      "openEditor": "Ouvrir l'éditeur",
+      "sessionReady": "Votre session est prête pour continuer l'édition.",
       "title": "Modifier l'audio sur une timeline multipiste",
       "subtitle": "Organisez les clips, mixez les pistes, ajoutez des effets, enregistrez et exportez — le tout dans votre navigateur.",
       "dropTitle": "Déposez des fichiers audio ici ou cliquez pour ajouter des pistes",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} dépasse 30 minutes — l'édition peut être lente.",
       "loading": "Chargement de l'éditeur…",
       "emptyTitle": "Aucune piste pour l'instant",
-      "trackCount": "{count} pistes"
+      "trackCount": "{count, plural, one {# piste} other {# pistes}}"
     },
     "MicCameraTester": {
       "title": "Testeur micro et caméra",

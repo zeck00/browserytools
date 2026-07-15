@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -11,7 +11,9 @@ import {
 } from "@waveform-playlist/browser";
 import { useDynamicEffects, useTrackDynamicEffects } from "@waveform-playlist/browser/tone";
 import { createTrack, type ClipTrack } from "@waveform-playlist/core";
-import { ToolShell } from "@/components/template/tool-shell";
+import { ArrowLeft, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useEditorModeStore } from "@/store/editor-mode-store";
 import { useWaveformTheme } from "@/lib/audio/waveform-theme";
 import {
   decodeAudioFile,
@@ -19,6 +21,7 @@ import {
   estimateDecodedBytes,
   STUDIO_SAMPLE_RATE,
 } from "@/lib/audio/import";
+import { AudioLanding } from "./AudioLanding";
 import { ImportDropzone } from "./ImportDropzone";
 import { TrackControls } from "./TrackControls";
 import { TransportBar } from "./TransportBar";
@@ -38,6 +41,21 @@ export default function AudioStudio() {
   const theme = useWaveformTheme();
   const tracksRef = useRef<ClipTrack[]>([]);
   tracksRef.current = tracks;
+
+  // Editor focus mode (editor-mode-store): while active, the editor stamps
+  // :root[data-editor="on"] so the shell hides the rail, drops the content
+  // gutter and hides the SEO zone (rail/app-shell CSS modules). Cleared on
+  // exit and on unmount so navigating away never strands the flag.
+  const { active: editorActive, enter: enterEditor, exit: exitEditor } =
+    useEditorModeStore();
+  useEffect(() => {
+    const el = document.documentElement;
+    if (editorActive) el.dataset.editor = "on";
+    else delete el.dataset.editor;
+    return () => {
+      delete el.dataset.editor;
+    };
+  }, [editorActive]);
 
   // Effects hooks are unconditional (must run every render, even before any
   // tracks are imported) and independent of WaveformPlaylistProvider's React
@@ -154,8 +172,10 @@ export default function AudioStudio() {
         toast.warning(t("bigSessionWarning", { mb: Math.round(bytes / 1024 / 1024) }));
         setWarnedBig(true);
       }
+      // Importing audio opens the editor focus mode.
+      enterEditor();
     },
-    [t, warnedBig, getEffectsWrapper]
+    [t, warnedBig, getEffectsWrapper, enterEditor]
   );
 
   // Dispose the removed track's live Tone.js effect instances (finding 2:
@@ -185,36 +205,66 @@ export default function AudioStudio() {
     [perTrack, recordingState, t]
   );
 
+  // Landing: normal ToolShell page (SEO/crumb/title/related kept). Importing
+  // audio, or "Open editor" on a resumed session, enters the editor.
+  if (!editorActive) {
+    return (
+      <AudioLanding
+        trackCount={tracks.length}
+        onFiles={importFiles}
+        onOpenEditor={enterEditor}
+      />
+    );
+  }
+
+  // Editor focus mode: a full-width workspace inside the content region (the
+  // top bar stays; the rail is hidden via :root[data-editor]). 4.5rem = the
+  // 56px sticky top bar + the tools <main>'s py-2.
   return (
-    <ToolShell
-      slug="audio"
-      title={t("title")}
-      sub={t("subtitle")}
-      primaryAction={{
-        label: t("export"),
-        onClick: () => setExportOpen(true),
-        disabled: tracks.length === 0,
-      }}
+    <WaveformPlaylistProvider
+      tracks={tracks}
+      onTracksChange={handleTracksChange}
+      effects={master.masterEffects}
+      sampleRate={STUDIO_SAMPLE_RATE}
+      timescale
+      waveHeight={160}
+      automaticScroll
+      controls={{ show: true, width: 240 }}
+      {...(theme ? { theme } : {})}
     >
-      {tracks.length === 0 ? (
-        <ImportDropzone onFiles={importFiles} />
-      ) : (
-        <WaveformPlaylistProvider
-          tracks={tracks}
-          onTracksChange={handleTracksChange}
-          effects={master.masterEffects}
-          sampleRate={STUDIO_SAMPLE_RATE}
-          timescale
-          waveHeight={96}
-          automaticScroll
-          controls={{ show: true, width: 200 }}
-          {...(theme ? { theme } : {})}
-        >
-          <ClipInteractionProvider snap>
-            <KeyboardShortcuts playback clipSplitting undo />
-            <div className="flex flex-col gap-3">
-              <TransportBar tracks={tracks} />
-              <div className="overflow-x-auto rounded-lg border border-[var(--bt-border)]">
+      <ClipInteractionProvider snap>
+        <KeyboardShortcuts playback clipSplitting undo />
+        <div className="flex h-[calc(100dvh-4.5rem)] flex-col bg-[var(--bt-bg)] text-[var(--bt-ink)]">
+          {/* header — Exit · title · transport · Export */}
+          <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--bt-line)] px-4 py-2.5">
+            <Button variant="ghost" size="sm" onClick={exitEditor} aria-label={t("exit")}>
+              <ArrowLeft className="me-1 size-4" />
+              {t("exit")}
+            </Button>
+            <span className="text-sm font-semibold text-[var(--bt-ink)]">
+              {t("title")}
+            </span>
+            <div className="mx-1 hidden h-5 w-px bg-[var(--bt-line)] sm:block" />
+            <TransportBar tracks={tracks} />
+            <div className="ms-auto flex items-center gap-3">
+              <span className="hidden text-xs text-[var(--bt-muted)] sm:inline">
+                {t("trackCount", { count: tracks.length })}
+              </span>
+              <Button
+                size="sm"
+                onClick={() => setExportOpen(true)}
+                disabled={tracks.length === 0}
+              >
+                <Download className="me-1.5 size-4" />
+                {t("export")}
+              </Button>
+            </div>
+          </header>
+
+          {/* body — track lanes (main) + effects inspector (aside) */}
+          <div className="flex min-h-0 flex-1">
+            <main className="flex min-w-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 overflow-auto">
                 <Waveform
                   showClipHeaders
                   renderTrackControls={(trackIndex) => (
@@ -232,7 +282,7 @@ export default function AudioStudio() {
                   recordingState={recordingState}
                 />
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 border-t border-[var(--bt-line)] px-4 py-2.5">
                 <ImportDropzone onFiles={importFiles} compact />
                 <RecordControl
                   tracks={tracks}
@@ -240,22 +290,30 @@ export default function AudioStudio() {
                   onRecordingState={setRecordingState}
                   createArmedTrack={createArmedTrack}
                 />
-                <span className="ms-auto text-sm opacity-60">
-                  {t("trackCount", { count: tracks.length })}
-                </span>
               </div>
-              <EffectsPanel tracks={tracks} master={master} perTrack={perTrack} />
-              <ExportDialog
-                open={exportOpen}
-                onOpenChange={setExportOpen}
-                tracks={tracks}
-                master={master}
-                perTrack={perTrack}
-              />
-            </div>
-          </ClipInteractionProvider>
-        </WaveformPlaylistProvider>
-      )}
-    </ToolShell>
+            </main>
+
+            <aside className="flex w-80 shrink-0 flex-col overflow-auto border-s border-[var(--bt-line)] bg-[var(--bt-surface)]">
+              <div className="border-b border-[var(--bt-line)] px-4 py-3">
+                <h2 className="text-[13px] font-semibold text-[var(--bt-ink)]">
+                  {t("effects")}
+                </h2>
+              </div>
+              <div className="p-4">
+                <EffectsPanel tracks={tracks} master={master} perTrack={perTrack} />
+              </div>
+            </aside>
+          </div>
+
+          <ExportDialog
+            open={exportOpen}
+            onOpenChange={setExportOpen}
+            tracks={tracks}
+            master={master}
+            perTrack={perTrack}
+          />
+        </div>
+      </ClipInteractionProvider>
+    </WaveformPlaylistProvider>
   );
 }

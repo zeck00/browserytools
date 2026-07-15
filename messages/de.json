@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Bitte wähle einen gültigen Schnittbereich."
     },
     "AudioEditor": {
+      "exit": "Beenden",
+      "openEditor": "Editor öffnen",
+      "sessionReady": "Deine Sitzung ist bereit zum Weiterbearbeiten.",
       "title": "Audio auf einer Mehrspur-Timeline bearbeiten",
       "subtitle": "Clips anordnen, Spuren mischen, Effekte hinzufügen, aufnehmen und exportieren — alles im Browser.",
       "dropTitle": "Audiodateien hierher ziehen oder klicken, um Spuren hinzuzufügen",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} ist länger als 30 Minuten — die Bearbeitung kann langsam sein.",
       "loading": "Editor wird geladen…",
       "emptyTitle": "Noch keine Spuren",
-      "trackCount": "{count} Spuren"
+      "trackCount": "{count, plural, one {# Spur} other {# Spuren}}"
     },
     "MicCameraTester": {
       "title": "Mikrofon- & Kameratest",

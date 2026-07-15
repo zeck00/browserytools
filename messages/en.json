@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Please select a valid trim range."
     },
     "AudioEditor": {
+      "exit": "Exit",
+      "openEditor": "Open editor",
+      "sessionReady": "Your session is ready to keep editing.",
       "title": "Edit audio on a multi-track timeline",
       "subtitle": "Arrange clips, mix tracks, add effects, record, and export — all in your browser.",
       "dropTitle": "Drop audio files here or click to add tracks",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} is over 30 minutes — editing may be slow.",
       "loading": "Loading editor…",
       "emptyTitle": "No tracks yet",
-      "trackCount": "{count} tracks"
+      "trackCount": "{count, plural, one {# track} other {# tracks}}"
     },
     "MicCameraTester": {
       "title": "Mic & Camera Tester",

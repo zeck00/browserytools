@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Silakan pilih rentang potongan yang valid."
     },
     "AudioEditor": {
+      "exit": "Keluar",
+      "openEditor": "Buka editor",
+      "sessionReady": "Sesi Anda siap untuk melanjutkan pengeditan.",
       "title": "Edit audio pada garis waktu multi-trek",
       "subtitle": "Atur klip, padukan trek, tambahkan efek, rekam, dan ekspor — semua di browser Anda.",
       "dropTitle": "Letakkan berkas audio di sini atau klik untuk menambahkan trek",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} berdurasi lebih dari 30 menit — pengeditan mungkin lambat.",
       "loading": "Memuat editor…",
       "emptyTitle": "Belum ada trek",
-      "trackCount": "{count} trek"
+      "trackCount": "{count, plural, other {# trek}}"
     },
     "MicCameraTester": {
       "title": "Penguji Mikrofon & Kamera",

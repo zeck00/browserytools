@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Selecione um intervalo de corte válido."
     },
     "AudioEditor": {
+      "exit": "Sair",
+      "openEditor": "Abrir editor",
+      "sessionReady": "Sua sessão está pronta para continuar editando.",
       "title": "Edite áudio em uma linha do tempo multifaixas",
       "subtitle": "Organize clipes, faça a mixagem das faixas, adicione efeitos, grave e exporte — tudo no seu navegador.",
       "dropTitle": "Solte arquivos de áudio aqui ou clique para adicionar faixas",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} tem mais de 30 minutos — a edição pode ficar lenta.",
       "loading": "Carregando editor…",
       "emptyTitle": "Ainda não há faixas",
-      "trackCount": "{count} faixas"
+      "trackCount": "{count, plural, one {# faixa} other {# faixas}}"
     },
     "MicCameraTester": {
       "title": "Testador de Microfone e Câmera",

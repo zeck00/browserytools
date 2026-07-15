@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "请选择有效的裁剪范围。"
     },
     "AudioEditor": {
+      "exit": "退出",
+      "openEditor": "打开编辑器",
+      "sessionReady": "你的会话已就绪，可继续编辑。",
       "title": "在多轨时间线上编辑音频",
       "subtitle": "排列片段、混合音轨、添加效果、录音并导出——全部在浏览器中完成。",
       "dropTitle": "将音频文件拖放到此处，或点击添加音轨",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} 时长超过 30 分钟——编辑可能会变慢。",
       "loading": "正在加载编辑器…",
       "emptyTitle": "暂无音轨",
-      "trackCount": "{count} 条音轨"
+      "trackCount": "{count, plural, other {# 条音轨}}"
     },
     "MicCameraTester": {
       "title": "麦克风与摄像头测试",

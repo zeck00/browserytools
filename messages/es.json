@@ -1005,6 +1005,9 @@
       "gifInvalidRange": "Selecciona un rango de recorte válido."
     },
     "AudioEditor": {
+      "exit": "Salir",
+      "openEditor": "Abrir editor",
+      "sessionReady": "Tu sesión está lista para seguir editando.",
       "title": "Edita audio en una línea de tiempo multipista",
       "subtitle": "Organiza clips, mezcla pistas, añade efectos, graba y exporta — todo en tu navegador.",
       "dropTitle": "Suelta archivos de audio aquí o haz clic para añadir pistas",
@@ -1055,7 +1058,7 @@
       "longFileWarning": "{name} dura más de 30 minutos — la edición puede ser lenta.",
       "loading": "Cargando editor…",
       "emptyTitle": "Aún no hay pistas",
-      "trackCount": "{count} pistas"
+      "trackCount": "{count, plural, one {# pista} other {# pistas}}"
     },
     "MicCameraTester": {
       "title": "Probador de micrófono y cámara",
