@@ -11,8 +11,9 @@ function getDecodeContext(): AudioContext {
   return decodeCtx;
 }
 
-/** Decode any audio file; falls back to ffmpeg.wasm WAV transcode for exotic containers. */
-export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
+/** Decode any audio file/blob; falls back to ffmpeg.wasm WAV transcode for exotic
+ *  containers. Accepts a Blob so restored session blobs decode through the same path. */
+export async function decodeAudioFile(file: Blob): Promise<AudioBuffer> {
   const bytes = await file.arrayBuffer();
   try {
     return await getDecodeContext().decodeAudioData(bytes.slice(0));
