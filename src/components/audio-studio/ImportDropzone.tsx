@@ -46,7 +46,7 @@ export function ImportDropzone({
       }}
       className={
         "flex cursor-pointer items-center justify-center gap-3 rounded-lg border border-dashed transition-colors " +
-        (dragOver ? "border-[var(--bt-accent)] bg-[var(--bt-accent)]/5 " : "border-[var(--bt-border)] ") +
+        (dragOver ? "border-[var(--bt-accent)] bg-[var(--bt-accent)]/5 " : "border-[var(--bt-line)] ") +
         (compact ? "px-4 py-2 text-sm" : "flex-col px-6 py-16")
       }
     >

@@ -20,6 +20,7 @@ export const FALLBACK = {
     muted: "#757570",
     accent: "#2e5cff",
     line: "rgba(22, 22, 21, 0.09)",
+    hover: "rgba(22, 22, 21, 0.05)",
   },
   dark: {
     surface: "#161615",
@@ -27,6 +28,7 @@ export const FALLBACK = {
     muted: "#8f8f89",
     accent: "#5d80ff",
     line: "rgba(241, 241, 239, 0.09)",
+    hover: "rgba(241, 241, 239, 0.07)",
   },
 } as const;
 
@@ -43,6 +45,7 @@ export function resolveWaveformTheme(el: HTMLElement, isDark: boolean): Record<s
   const mutedText = token(s, "--bt-muted", fallback.muted);
   const accent = token(s, "--bt-accent", fallback.accent);
   const line = token(s, "--bt-line", fallback.line);
+  const hover = token(s, "--bt-hover", fallback.hover);
   return {
     backgroundColor: surface,
     surfaceColor: surface,
@@ -58,6 +61,15 @@ export function resolveWaveformTheme(el: HTMLElement, isDark: boolean): Record<s
     textColorMuted: mutedText,
     clipHeaderBackgroundColor: line,
     clipHeaderTextColor: ink,
+    // Selected-track colours: the library defaults are a hardcoded light blue
+    // that is unreadable in dark mode. Normalise the selected lane/wave to
+    // match the unselected ones (surface/accent) and give the selected control
+    // panel a subtle themed tint; the crisp selection cue is the accent border
+    // TrackControls draws. Keeps both themes readable.
+    selectedTrackControlsBackground: hover,
+    selectedTrackBackground: surface,
+    selectedWaveOutlineColor: surface,
+    selectedWaveFillColor: accent,
   };
 }
 

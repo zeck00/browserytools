@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   useDynamicEffects,
@@ -7,10 +8,9 @@ import {
 } from "@waveform-playlist/browser/tone";
 import { usePlaylistState } from "@waveform-playlist/browser";
 import type { ClipTrack } from "@waveform-playlist/core";
-import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { X } from "lucide-react";
+import { SliderRow } from "@/components/shared/SliderRow";
+import { Plus, X } from "lucide-react";
 
 type EffectParam = { name: string; min: number; max: number; step: number; default: number };
 const CURATED: { id: string; labelKey: string; params: EffectParam[] }[] = [
@@ -65,6 +65,45 @@ type ActiveLike = {
   bypassed?: boolean;
 };
 
+function formatParam(value: number, step: number): string {
+  if (step >= 1) return String(Math.round(value));
+  if (step >= 0.1) return value.toFixed(1);
+  return value.toFixed(2);
+}
+
+/**
+ * One effect parameter, controlled by local state so the slider reflects the
+ * user's own drags without depending on the effects hook re-emitting `params`
+ * per tick (it seeds from the active param value / curated default). Remounted
+ * per effect instance via the parent's `key`, so switching tracks or re-adding
+ * an effect resets cleanly.
+ */
+function EffectParamRow({
+  param,
+  initial,
+  onChange,
+}: {
+  param: EffectParam;
+  initial: number;
+  onChange: (value: number) => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <SliderRow
+      label={param.name}
+      value={value}
+      display={formatParam(value, param.step)}
+      min={param.min}
+      max={param.max}
+      step={param.step}
+      onChange={(v) => {
+        setValue(v);
+        onChange(v);
+      }}
+    />
+  );
+}
+
 function EffectChain({
   active,
   onAdd,
@@ -81,32 +120,46 @@ function EffectChain({
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap gap-1.5">
         {CURATED.map((def) => (
-          <Button key={def.id} size="sm" variant="outline" onClick={() => onAdd(def.id)}>
-            + {t(def.labelKey as Parameters<typeof t>[0])}
-          </Button>
+          <button
+            key={def.id}
+            type="button"
+            onClick={() => onAdd(def.id)}
+            className="inline-flex h-7 items-center gap-1 rounded-full border border-[var(--bt-line)] bg-[var(--bt-surface)] px-2.5 text-xs font-medium text-[var(--bt-ink)] transition-colors hover:bg-[var(--bt-hover)]"
+          >
+            <Plus className="size-3.5 opacity-60" />
+            {t(def.labelKey as Parameters<typeof t>[0])}
+          </button>
         ))}
       </div>
       {active.map((fx) => {
         const def = CURATED.find((d) => d.id === fx.effectId);
         if (!def) return null;
         return (
-          <div key={fx.instanceId} className="rounded-md border border-[var(--bt-border)] p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium">{t(def.labelKey as Parameters<typeof t>[0])}</span>
-              <Button size="sm" variant="ghost" onClick={() => onRemove(fx.instanceId)} aria-label={t("remove")}>
-                <X className="size-4" />
-              </Button>
+          <div
+            key={fx.instanceId}
+            className="rounded-lg border border-[var(--bt-line)] bg-[var(--bt-surface)] p-3"
+          >
+            <div className="mb-2.5 flex items-center justify-between">
+              <span className="text-[13px] font-semibold text-[var(--bt-ink)]">
+                {t(def.labelKey as Parameters<typeof t>[0])}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemove(fx.instanceId)}
+                aria-label={t("remove")}
+                className="grid size-6 place-items-center rounded-md text-[var(--bt-muted)] transition-colors hover:bg-[var(--bt-hover)] hover:text-[var(--bt-ink)]"
+              >
+                <X className="size-3.5" />
+              </button>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-2.5">
               {def.params.map((p) => (
-                <label key={p.name} className="flex items-center gap-2 text-xs">
-                  <span className="w-16 opacity-60">{p.name}</span>
-                  <Slider
-                    min={p.min} max={p.max} step={p.step}
-                    defaultValue={[(fx.params?.[p.name] as number | undefined) ?? p.default]}
-                    onValueChange={([v]) => onParam(fx.instanceId, p.name, v)}
-                  />
-                </label>
+                <EffectParamRow
+                  key={p.name}
+                  param={p}
+                  initial={(fx.params?.[p.name] as number | undefined) ?? p.default}
+                  onChange={(v) => onParam(fx.instanceId, p.name, v)}
+                />
               ))}
             </div>
           </div>
@@ -130,36 +183,35 @@ export function EffectsPanel({
   const selectedTrack = tracks.find((tr) => tr.id === selectedTrackId);
 
   return (
-    <div className="rounded-lg border border-[var(--bt-border)] p-4">
-      <h2 className="mb-3 text-sm font-semibold">{t("effects")}</h2>
-      <Tabs defaultValue="track">
-        <TabsList>
-          <TabsTrigger value="track">
-            {t("trackEffects")}{selectedTrack ? `: ${selectedTrack.name}` : ""}
-          </TabsTrigger>
-          <TabsTrigger value="master">{t("masterEffects")}</TabsTrigger>
-        </TabsList>
-        <TabsContent value="track">
-          {selectedTrack ? (
-            <EffectChain
-              active={perTrack.trackEffectsState.get(selectedTrack.id) ?? []}
-              onAdd={(id) => perTrack.addEffectToTrack(selectedTrack.id, id)}
-              onRemove={(iid) => perTrack.removeEffectFromTrack(selectedTrack.id, iid)}
-              onParam={(iid, p, v) => perTrack.updateTrackEffectParameter(selectedTrack.id, iid, p, v)}
-            />
-          ) : (
-            <p className="py-4 text-sm opacity-60">{t("selectTrackFirst")}</p>
-          )}
-        </TabsContent>
-        <TabsContent value="master">
+    <Tabs defaultValue="track" className="flex flex-col gap-3">
+      <TabsList className="w-full">
+        <TabsTrigger value="track" className="flex-1">
+          {t("trackEffects")}
+        </TabsTrigger>
+        <TabsTrigger value="master" className="flex-1">
+          {t("masterEffects")}
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="track">
+        {selectedTrack ? (
           <EffectChain
-            active={master.activeEffects}
-            onAdd={master.addEffect}
-            onRemove={master.removeEffect}
-            onParam={master.updateParameter}
+            active={perTrack.trackEffectsState.get(selectedTrack.id) ?? []}
+            onAdd={(id) => perTrack.addEffectToTrack(selectedTrack.id, id)}
+            onRemove={(iid) => perTrack.removeEffectFromTrack(selectedTrack.id, iid)}
+            onParam={(iid, p, v) => perTrack.updateTrackEffectParameter(selectedTrack.id, iid, p, v)}
           />
-        </TabsContent>
-      </Tabs>
-    </div>
+        ) : (
+          <p className="py-4 text-sm text-[var(--bt-muted)]">{t("selectTrackFirst")}</p>
+        )}
+      </TabsContent>
+      <TabsContent value="master">
+        <EffectChain
+          active={master.activeEffects}
+          onAdd={master.addEffect}
+          onRemove={master.removeEffect}
+          onParam={master.updateParameter}
+        />
+      </TabsContent>
+    </Tabs>
   );
 }

@@ -8,8 +8,41 @@ import {
 } from "@waveform-playlist/browser";
 import type { ClipTrack } from "@waveform-playlist/core";
 import { X } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { Button } from "@/components/ui/button";
+import { SliderRow } from "@/components/shared/SliderRow";
+
+/** Mute/Solo pill — the app's pill treatment (landing filter chips): idle uses
+ *  --bt-fill + --bt-pill-idle-fg, active uses --bt-pill-active-*. */
+function TogglePill({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: (e: React.MouseEvent) => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={
+        "h-7 rounded-full px-3 text-[11px] font-medium transition-colors " +
+        (active
+          ? "bg-[var(--bt-pill-active-bg)] text-[var(--bt-pill-active-fg)]"
+          : "bg-[var(--bt-fill)] text-[var(--bt-pill-idle-fg)] hover:bg-[var(--bt-fill-hover)]")
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function panDisplay(v: number): string {
+  if (v < -0.02) return `L${Math.round(-v * 100)}`;
+  if (v > 0.02) return `R${Math.round(v * 100)}`;
+  return "C";
+}
 
 export function TrackControls({
   trackIndex,
@@ -39,66 +72,70 @@ export function TrackControls({
   return (
     <div
       className={
-        "flex h-full flex-col justify-center gap-1.5 px-3 py-2 text-xs " +
-        (selected ? "bg-[var(--bt-accent)]/10" : "")
+        "flex h-full flex-col justify-center gap-2 border-s-2 px-3.5 py-2.5 " +
+        (selected ? "border-[var(--bt-accent)]" : "border-transparent")
       }
       onClick={() => setSelectedTrackId(track.id)}
       data-testid={`track-controls-${trackIndex}`}
     >
       <div className="flex items-center gap-1">
-        <p className="flex-1 truncate font-medium" title={track.name}>{track.name}</p>
+        <p
+          className="flex-1 truncate text-[13px] font-semibold text-[var(--bt-ink)]"
+          title={track.name}
+        >
+          {track.name}
+        </p>
         {onRemove && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="size-6 shrink-0 p-0"
+          <button
+            type="button"
             disabled={removeDisabled}
-            onClick={(e) => { e.stopPropagation(); onRemove(trackIndex); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(trackIndex);
+            }}
             aria-label={t("remove")}
             data-testid={`remove-track-${trackIndex}`}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-[var(--bt-muted)] transition-colors hover:bg-[var(--bt-hover)] hover:text-[var(--bt-ink)] disabled:pointer-events-none disabled:opacity-40"
           >
             <X className="size-3.5" />
-          </Button>
+          </button>
         )}
       </div>
-      <div className="flex gap-1">
-        <Button
-          size="sm"
-          variant={state.muted ? "default" : "outline"}
-          className="h-6 px-2 text-[10px]"
-          onClick={(e) => { e.stopPropagation(); setTrackMute(trackIndex, !state.muted); }}
-          aria-pressed={state.muted}
-        >
-          {t("mute")}
-        </Button>
-        <Button
-          size="sm"
-          variant={state.soloed ? "default" : "outline"}
-          className="h-6 px-2 text-[10px]"
-          onClick={(e) => { e.stopPropagation(); setTrackSolo(trackIndex, !state.soloed); }}
-          aria-pressed={state.soloed}
-        >
-          {t("solo")}
-        </Button>
+      {/* Interacting with any control also selects the track (the click
+          bubbles to the panel's onClick) — natural, and keeps the effects
+          inspector in sync with what you're touching. */}
+      <div className="flex gap-1.5">
+        <TogglePill
+          active={state.muted}
+          onClick={() => setTrackMute(trackIndex, !state.muted)}
+          label={t("mute")}
+        />
+        <TogglePill
+          active={state.soloed}
+          onClick={() => setTrackSolo(trackIndex, !state.soloed)}
+          label={t("solo")}
+        />
       </div>
-      <label className="flex items-center gap-2">
-        <span className="w-8 opacity-60">{t("volume")}</span>
-        <Slider
-          min={0} max={1} step={0.01} value={[state.volume]}
-          onValueChange={([v]) => setTrackVolume(trackIndex, v)}
-          className="w-24"
-          aria-label={t("volume")}
+      <div className="flex flex-col gap-2">
+        <SliderRow
+          label={t("volume")}
+          value={state.volume}
+          display={`${Math.round(state.volume * 100)}%`}
+          onChange={(v) => setTrackVolume(trackIndex, v)}
+          min={0}
+          max={1}
+          step={0.01}
         />
-      </label>
-      <label className="flex items-center gap-2">
-        <span className="w-8 opacity-60">{t("pan")}</span>
-        <Slider
-          min={-1} max={1} step={0.05} value={[state.pan]}
-          onValueChange={([v]) => setTrackPan(trackIndex, v)}
-          className="w-24"
-          aria-label={t("pan")}
+        <SliderRow
+          label={t("pan")}
+          value={state.pan}
+          display={panDisplay(state.pan)}
+          onChange={(v) => setTrackPan(trackIndex, v)}
+          min={-1}
+          max={1}
+          step={0.05}
         />
-      </label>
+      </div>
     </div>
   );
 }
