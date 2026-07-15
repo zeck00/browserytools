@@ -316,3 +316,11 @@
 @media (max-width: 900px) {
   .railSheet { display: flex; }
 }
+
+/* Audio-editor focus mode: the editor stamps :root[data-editor="on"] (see
+   editor-mode-store) to reclaim the full content width. Hide the desktop rail;
+   the editor keeps app context via the top bar + its own Exit control. Under
+   900px the rail is already the mobile bar, unaffected. */
+:global(:root[data-editor="on"]) .rail {
+  display: none;
+}

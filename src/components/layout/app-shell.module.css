@@ -68,3 +68,13 @@
   :global([data-testid="tool-seo-content"]) {
   max-width: 64rem;
 }
+
+/* Audio-editor focus mode (editor-mode-store). While active, reclaim the
+   253px rail gutter and hide the tool's SEO zone so the editor workspace fills
+   the content region below the (still-present) top bar. */
+:global(:root[data-editor="on"]) .contentScroll {
+  margin-inline-start: 0;
+}
+:global(:root[data-editor="on"]) .toolSeoZone {
+  display: none;
+}
